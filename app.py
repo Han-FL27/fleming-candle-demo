@@ -1,33 +1,42 @@
+import math
 import streamlit as st
 import pandas as pd
-st.set_page_config(page_title='Fleming Candle Lab Demo',page_icon='🕯️',layout='wide')
-st.title('🕯️ Fleming Candle Lab — Prototype')
-st.info('DEMO ONLY — No trained AI model. Results below are historical observations, not predictions or safety approval.')
-records = pd.DataFrame([
- {'Report':'260107-009','Product':'15.1 oz 2-wick glass jar — Cabin Moon','Type':'Container candle','Size (oz)':15.1,'Wicks':2,'Flame (mm)':'22–25','Glass max (°C)':56,'Wax pool max (°C)':70,'Burn time (h)':50,'Soot':'Grade 0','Result':'PASS','Formula code':'Unknown','Wick size':'Unknown'},
- {'Report':'260225-005','Product':'Wands taper — Brown Leather','Type':'Taper','Size (oz)':None,'Wicks':None,'Flame (mm)':'38–40','Glass max (°C)':None,'Wax pool max (°C)':None,'Burn time (h)':5,'Soot':'N/A','Result':'PASS','Formula code':'Unknown','Wick size':'Unknown'}])
-t1,t2,t3=st.tabs(['New candle / Predict','Historical reports','Data requirements'])
-with t1:
+st.set_page_config(page_title='Fleming Candle Predictor — Demo v2',page_icon='🕯️',layout='wide')
+st.title('🕯️ Fleming Candle Predictor — Demo v2')
+st.warning('PRELIMINARY SCREENING ONLY. The wick count below is a geometric starting point, NOT an AI prediction, validated wick recommendation, burn-test result or safety approval. Do not use it to release product.')
+reports=pd.DataFrame([{'Report':'260107-009','Product':'15.1 oz Target glass jar','Wick count':2,'Flame (mm)':'22–25','Max glass (°C)':56,'Burn time (h)':50,'Soot':'Grade 0','Result':'PASS','Formula':'Unknown','Wick size':'Unknown'},{'Report':'260225-005','Product':'Wands taper','Wick count':None,'Flame (mm)':'38–40','Max glass (°C)':None,'Burn time (h)':5,'Soot':'N/A','Result':'PASS','Formula':'Unknown','Wick size':'Unknown'}])
+a,b,c=st.tabs(['New candle / Get screening result','Historical reports','Data collection'])
+with a:
  st.subheader('Enter new candle specifications')
- a,b=st.columns(2)
- with a:
-  formula=st.text_input('Formula code',placeholder='e.g. Formula ID from Excel')
-  size=st.number_input('Wax weight (oz)',min_value=0.0,value=13.0,step=0.5)
-  diameter=st.number_input('Vessel inner diameter (mm)',min_value=0.0,value=85.0,step=1.0)
- with b:
+ x,y=st.columns(2)
+ with x:
+  formula=st.text_input('Formula code (optional)',placeholder='e.g. NL8-17')
+  oz=st.number_input('Wax weight (oz)',min_value=1.0,max_value=100.0,value=13.0,step=0.5)
+  diameter=st.number_input('Vessel inner diameter (mm)',min_value=20.0,max_value=350.0,value=85.0,step=1.0)
+ with y:
   fragrance=st.number_input('Fragrance load (%)',min_value=0.0,max_value=30.0,value=6.0,step=0.5)
   series=st.selectbox('Wick series',['Wedo Stabilo','Wedo LX','Wedo PK','Wood wick','Other'])
-  wick_count=st.number_input('Wicks to evaluate',min_value=1,max_value=12,value=2)
- if st.button('Predict burning performance',type='primary'):
-  st.warning('Insufficient linked burn-test data. No scientifically defensible wick-count, wick-size or burn-curve prediction is available yet.')
-  st.write('**Entered design:**',f'{size:g} oz · Ø{diameter:g} mm · {fragrance:g}% fragrance · {series} · {wick_count} wicks')
-  st.write('**Historical example only:** A different 15.1 oz Target glass jar with 2 wicks passed its burn test. Its formula and wick size are unknown; it cannot validate your new design.')
-with t2:
- st.subheader('Uploaded burn-test reports — extracted observations')
- st.dataframe(records,use_container_width=True,hide_index=True)
- st.download_button('Download sample observations (CSV)',records.to_csv(index=False).encode('utf-8-sig'),'fleming_burn_test_observations.csv','text/csv')
- st.caption('Source: uploaded Target reports 260107-009 and 260225-005. Values are reported maxima/summary, not hourly time series.')
-with t3:
- st.subheader('Data needed before training an AI model')
- st.markdown('''For **each tested sample**, record:\n- Formula code and full wax composition; fragrance type and percentage\n- Vessel inside diameter, shape, fill weight, glass thickness\n- Wick supplier, series, exact size, count, and spacing\n- Burn cycle and measurements by hour: flame height, melt pool diameter/depth, vessel temperature, wax consumption\n- Soot, residue, stability, pass/fail, test date, original report link\n\n**Important:** The two provided reports do not link wick size or wax formula to outcomes. A historical PASS does not imply another candle will pass.''')
- st.markdown('**Next step:** standardize these fields, have Lab validate them, then build and evaluate a predictive model against unseen burn tests.')
+  count=st.number_input('Wicks to compare',min_value=1,max_value=12,value=2)
+ if st.button('Get preliminary screening result',type='primary'):
+  # A transparent geometry-only example: one nominal 55 mm circular coverage region per wick.
+  # This is an arbitrary DEMONSTRATION assumption, not an empirical wick sizing law.
+  coverage=55.0
+  theoretical=(diameter/coverage)**2
+  lower=max(1,min(12,math.floor(theoretical)))
+  upper=max(1,min(12,math.ceil(theoretical)))
+  st.subheader('Preliminary result — geometry-only demo')
+  m1,m2,m3=st.columns(3)
+  m1.metric('Illustrative wick-count range',f'{lower}–{upper}' if lower!=upper else str(lower))
+  m2.metric('Your comparison',f'{count} wicks')
+  m3.metric('Exact wick size','Unknown')
+  st.info(f'How calculated: circular vessel area ÷ nominal area per wick using an ASSUMED {coverage:g} mm coverage diameter. This is a demo calculation only, not a validated physical model. Your wax formula, wick series, fragrance and vessel design can change the real result.')
+  st.write('**Historical observation (not a match):** A different 15.1 oz Target jar with 2 wicks passed its test. Its wax formula, exact wick size and diameter are not linked to this input.')
+  st.error('Melt pool, flame height, glass temperature and soot over time: cannot be predicted reliably from the available data. Lab burn testing is required.')
+  st.caption('For a usable predictor, collect linked formula + vessel + exact wick size/count + hourly burn measurements and validate against held-out tests.')
+with b:
+ st.dataframe(reports,hide_index=True,use_container_width=True)
+ st.download_button('Download historical observations',reports.to_csv(index=False).encode('utf-8-sig'),'historical_observations.csv','text/csv')
+with c:
+ st.write('Record each new burn test with the exact formula, vessel, wick supplier/series/size/count, fragrance, burn-cycle timestamps, melt pool, flame height, glass temperature, soot and residue.')
+ template=pd.DataFrame(columns=['Sample ID','Formula code','Wax weight (oz)','Vessel diameter (mm)','Fragrance (%)','Wick series','Wick size','Wick count','Burn cycle','Hour','Flame height (mm)','Melt pool diameter (mm)','Glass temperature (C)','Soot','Result','Source report'])
+ st.download_button('Download blank burn-test template',template.to_csv(index=False).encode('utf-8-sig'),'burn_test_template.csv','text/csv')
