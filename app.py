@@ -1,101 +1,79 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title='Fleming | Candle Intelligence POC',page_icon='🕯️',layout='wide')
-st.markdown('''<style>.block-container{padding-top:1.5rem;max-width:1300px}h1,h2,h3{letter-spacing:-.03em}div[data-testid="stMetric"]{background:#f4f6f9;padding:16px;border-radius:12px;border:1px solid #e8ebf0} .small-note{color:#666;font-size:.86rem}</style>''',unsafe_allow_html=True)
-st.title('🕯️ Fleming Candle Intelligence')
-st.caption('EXECUTIVE PROOF OF CONCEPT  |  Demonstration only — NOT a validated burn prediction model')
-with st.sidebar:
-    st.header('New candle design')
-    formula=st.selectbox('Wax blend (illustrative)', ['Palm / Soy blend','Palm wax','Soy wax','Shea / Paraffin blend','Other'])
-    weight=st.number_input('Wax fill (oz)',1.,100.,13.,.5)
-    diameter=st.number_input('Vessel inner diameter (mm)',30.,200.,85.,1.)
-    height=st.number_input('Vessel inner height (mm)',30.,250.,100.,5.)
-    fragrance=st.number_input('Fragrance load (%)',0.,20.,6.,.5)
-    series=st.selectbox('Wick series to explore',['Wedo Stabilo','Wedo LX','Wedo PK','Wood wick','Other'])
-    count=st.slider('Candidate wick count',1,5,2)
-    compare=st.slider('Alternative wick count',1,5,3)
-    st.info('No proprietary Fleming formulas are embedded or uploaded in this public demo.')
+st.set_page_config(page_title='Fleming Candle Predictor | AR Demo',page_icon='🕯️',layout='wide')
+st.markdown('''<style>.block-container{padding-top:1.4rem;max-width:1250px}div[data-testid="stMetric"]{background:#f2f5f9;border:1px solid #dce3ec;border-radius:13px;padding:14px}div.stButton>button[kind="primary"]{background:#c63543;border-radius:10px;font-weight:700;padding:.7rem 1.5rem}</style>''',unsafe_allow_html=True)
+st.title('🕯️ Fleming Candle Burning Predictor')
+st.caption('AR PRESENTATION • INTERACTIVE PROOF OF CONCEPT • ALL GENERATED RESULTS ARE SYNTHETIC EXAMPLES, NOT VALIDATED PREDICTIONS')
+st.info('How to demo: change candle inputs → click **▶ RUN DEMO PREDICTION** → watch the results appear below. Click again with different settings to compare.')
 
-st.warning('⚠️ DEMO / SYNTHETIC SCENARIOS: All simulation curves and risk indicators below are illustrative, not measurements, scientific predictions, or approval criteria. Actual wick size and safe performance require linked burn tests.')
-
-def synthetic(n):
-    # Display-only scenario: deterministic synthetic patterns, not physical equations.
-    h=np.arange(0,5)
-    area=np.pi*(diameter/2)**2
-    coverage=np.clip(n*55**2/(diameter**2),.15,1.6)
-    melt=np.clip((1-np.exp(-h/1.45))*diameter*(.55+.24*coverage),0,diameter)
-    temp=24+(23+3*n)*(1-np.exp(-h/1.5))
-    flame=np.where(h==0,0,14+3*n+2*(1-np.exp(-h/1.2)))
-    return pd.DataFrame({'Hour':h,'Melt pool diameter (mm)':np.round(melt,1),'Glass temperature (°C)':np.round(temp,1),'Flame height (mm)':np.round(flame,1)})
-
-p1,p2,p3,p4=st.tabs(['01  Design screening','02  Burn simulation','03  Evidence & validation','04  Business case for AR'])
-with p1:
-    st.subheader('Candidate screening — conceptual illustration')
-    # Historical 55mm reference is an assumed visualization parameter, not a validated model.
-    area=np.pi*(diameter/2)**2
-    estimate=max(1,int(np.ceil(area/(np.pi*(55/2)**2))))
-    c1,c2,c3,c4=st.columns(4)
-    c1.metric('Diameter',f'{diameter:.0f} mm')
-    c2.metric('Geometry-only reference',f'{max(1,estimate-1)}–{min(5,estimate+1)} wicks')
-    c3.metric('Candidate A',f'{count} wicks')
-    c4.metric('Exact wick size','Not established')
-    st.info('Geometry-only reference uses an ASSUMED 55 mm nominal coverage diameter. It is not a recommendation, validated wick-count prediction or wick-size selection.')
-    st.markdown('#### What a production system would return')
-    st.dataframe(pd.DataFrame([
-        {'Output':'Wick count / arrangement','POC status':'Illustrative screening only','Production requirement':'Verified formula + vessel + historical wick/burn outcomes'},
-        {'Output':'Wick series and exact size','POC status':'Not available','Production requirement':'Manufacturer size specification + matched tests'},
-        {'Output':'Melt pool / temperature / flame','POC status':'Synthetic example charts','Production requirement':'Hourly test measurements and validation'},
-        {'Output':'Soot / residue / safety','POC status':'Qualitative review checklist','Production requirement':'Observed outcomes and customer acceptance criteria'}]),hide_index=True,use_container_width=True)
-    st.markdown('#### Lab trial checklist')
-    for label in ['Confirm formula and fragrance ID','Record vessel dimensions and glass thickness','Record exact wick series, size, count and placement','Run standard burn cycles and record measurements','Review soot, residue, glass temperature and failure modes']:
-        st.checkbox(label)
-with p2:
-    st.subheader('Two-design scenario comparison')
-    st.caption('Synthetic curves only — to demonstrate the future user experience. These are NOT predictions for the selected candle.')
-    a=synthetic(count); b=synthetic(compare)
-    metric=st.selectbox('Chart measurement',['Melt pool diameter (mm)','Glass temperature (°C)','Flame height (mm)'])
-    fig=go.Figure()
-    fig.add_trace(go.Scatter(x=a['Hour'],y=a[metric],name=f'Candidate A: {count} wicks',mode='lines+markers'))
-    fig.add_trace(go.Scatter(x=b['Hour'],y=b[metric],name=f'Candidate B: {compare} wicks',mode='lines+markers',line={'dash':'dash'}))
-    fig.update_layout(height=380,margin=dict(l=15,r=15,t=20,b=15),xaxis_title='Elapsed burn time (hours)',yaxis_title=metric,legend=dict(orientation='h',y=1.12))
-    st.plotly_chart(fig,use_container_width=True)
-    st.caption('Synthetic generation is deterministic and illustrative; changing wick count changes the curve visually but does not model candle physics.')
-    st.markdown('#### Example hourly report layout (synthetic)')
-    tab=a.copy();tab.insert(0,'Scenario',f'A: {count} wicks');tab2=b.copy();tab2.insert(0,'Scenario',f'B: {compare} wicks')
-    st.dataframe(pd.concat([tab,tab2],ignore_index=True),hide_index=True,use_container_width=True)
-    st.download_button('Download synthetic example CSV',pd.concat([tab,tab2],ignore_index=True).to_csv(index=False).encode(),'synthetic_demo_only.csv','text/csv')
-    st.markdown('#### Risk assessment — required evidence')
-    cols=st.columns(4)
-    for col,name,desc in zip(cols,['Tunneling','Soot','High glass temp','Wall residue'],['Melt pool width / depth','Visual soot grading','Measured peak temperature','End-of-life inspection']):
-        with col:
-            st.error('NOT ASSESSED')
-            st.write('**'+name+'**')
-            st.caption(desc)
-with p3:
-    st.subheader('Evidence readiness')
-    st.success('Available: wax formulation workbook; historical burn reports; reference wick library.')
-    st.error('Missing link: verified formula ID + exact wick series/size + vessel details + hourly burn data for the SAME tested sample.')
-    st.markdown('#### Existing report — historical observation only')
-    st.write('15.1 oz Target glass jar, 2 wicks: prior report recorded PASS; reported peak glass temperature 56°C, peak wax-pool temperature 70°C, flame height 22–25 mm, soot grade 0 and total burn time 50 hours. Formula and exact wick size are not linked. This does not validate any current input.')
-    st.markdown('#### Minimum data per tested sample')
-    template=pd.DataFrame(columns=['Test_ID','Formula_Code','Wax_Composition','Fragrance_ID','Fragrance_pct','Fill_oz','Vessel_Inner_Diameter_mm','Vessel_Height_mm','Wick_Series','Wick_Size','Wick_Count','Wick_Placement_mm','Cycle','Elapsed_Hours','Melt_Pool_Diameter_mm','Melt_Pool_Depth_mm','Flame_Height_mm','Glass_Temp_C','Soot_Grade','Wall_Residue','Pass_Fail','Source_Report'])
-    st.download_button('Download Lab data template (CSV)',template.to_csv(index=False).encode(),'Fleming_Lab_Burn_Test_Template.csv','text/csv')
-    st.markdown('#### How feasibility will be proven')
-    st.write('1. Link a small set of real, representative test records.  2. Train a baseline on one subset.  3. Predict withheld samples without seeing their results.  4. Compare prediction error with a simple engineering baseline.  5. Expand only if performance is useful and repeatable.')
-with p4:
-    st.subheader('Decision brief for AR')
-    st.markdown('**Proposal:** Build a searchable burn-test database, then validate an AI-assisted wick-screening tool before any production use.')
+with st.form('design'):
+    st.subheader('1  Enter candle specifications')
     c1,c2,c3=st.columns(3)
-    c1.metric('Phase 1','Database')
-    c2.metric('Phase 2','Validated POC')
-    c3.metric('Phase 3','Lab rollout')
-    st.markdown('**Expected value to evaluate (not yet measured):** fewer unsuccessful trial combinations, faster development screening, reusable historical knowledge, consistent reporting.')
-    st.markdown('**What AR is being asked to approve:** a limited pilot to standardize burn-test records and provide a small linked dataset for independent model validation — not approval of an untested AI recommendation.')
-    st.markdown('**Success criteria to agree with AR:** measurable reduction in trial rounds or screening time; prediction errors within agreed limits; no relaxation of safety burn testing.')
-    st.markdown('**Next step:** assign a Lab data owner and choose 10–20 fully traceable candle trials for a feasibility study. This is a proposed starting scope, not a proven minimum sample size.')
+    with c1:
+        formula=st.selectbox('Wax blend (demo)', ['Palm / Soy blend','Palm wax','Soy wax','Shea / Paraffin blend'])
+        weight=st.number_input('Wax fill (oz)',1.,100.,13.,.5)
+    with c2:
+        diameter=st.number_input('Vessel inner diameter (mm)',30.,200.,85.,1.)
+        fragrance=st.number_input('Fragrance (%)',0.,20.,6.,.5)
+    with c3:
+        series=st.selectbox('Wick family',['Wedo Stabilo','Wedo LX','Wedo PK','Wood wick'])
+        candidate=st.slider('Candidate A: number of wicks',1,5,2)
+        alternative=st.slider('Candidate B: number of wicks',1,5,3)
+    run=st.form_submit_button('▶ RUN DEMO PREDICTION',type='primary',use_container_width=True)
 
-st.divider()
-st.caption('Fleming Candle Intelligence POC • v3 • Presentation prototype • No proprietary formula database connected • Lab testing remains mandatory')
+if run:
+    st.session_state['result']={'formula':formula,'weight':weight,'diameter':diameter,'fragrance':fragrance,'series':series,'candidate':candidate,'alternative':alternative}
+    st.session_state['runs']=st.session_state.get('runs',0)+1
+
+if 'result' not in st.session_state:
+    st.markdown('### 2  Awaiting input')
+    st.write('Click **RUN DEMO PREDICTION** above. Results, charts, and a comparison will appear here.')
+else:
+    p=st.session_state['result']; d=p['diameter']; n=p['candidate']; m=p['alternative']
+    def scenario(wicks):
+        hours=np.arange(0,5,1)
+        # Fictional curves for UI demonstration only, deliberately not physical equations.
+        factor=(wicks/2)*(85/d)**0.35
+        blend={'Palm / Soy blend':1.0,'Palm wax':.94,'Soy wax':.9,'Shea / Paraffin blend':1.06}[p['formula']]
+        melt=np.clip(d*(.77+.08*(factor-1))*blend*(1-np.exp(-hours/(1.1+0.1/factor))),0,d)
+        temp=24+(24+3*wicks+0.35*(p['fragrance']-6))*(1-np.exp(-hours/1.55))
+        flame=np.where(hours==0,0,15+2.8*wicks+1.5*(1-np.exp(-hours/1.2)))
+        return pd.DataFrame({'Hour':hours,'Melt pool (mm)':np.round(melt,1),'Glass temperature (°C)':np.round(temp,1),'Flame height (mm)':np.round(flame,1)})
+    a=scenario(n); b=scenario(m)
+    st.success(f'✓ Demo calculation completed — Run #{st.session_state["runs"]}. Results updated for {p["weight"]:g} oz / Ø{d:g} mm / {p["formula"]}.')
+    st.warning('**SYNTHETIC DEMONSTRATION — NOT AI OR LAB-VALIDATED.** These values are generated to show how the future app would respond. Do not use them for wick selection, safety, or production.')
+    st.subheader('2  Instant demo results')
+    r1,r2,r3,r4=st.columns(4)
+    r1.metric('Geometry-only wick range (illustrative)',f'{max(1,int(np.ceil((d/55)**2))-1)}–{min(5,int(np.ceil((d/55)**2))+1)}')
+    r2.metric('Candidate A',f'{n} wicks')
+    r3.metric('Demo peak glass temp A',f'{a["Glass temperature (°C)"].max():.1f} °C')
+    r4.metric('Exact wick size','Not established')
+    st.subheader('3  Burning curves — 0 to 4 hours (synthetic)')
+    metrics=['Melt pool (mm)','Glass temperature (°C)','Flame height (mm)']
+    for metric in metrics:
+        fig=go.Figure()
+        fig.add_trace(go.Scatter(x=a['Hour'],y=a[metric],mode='lines+markers',name=f'A — {n} wicks',line=dict(width=4,color='#c63543')))
+        fig.add_trace(go.Scatter(x=b['Hour'],y=b[metric],mode='lines+markers',name=f'B — {m} wicks',line=dict(width=3,color='#316f9b',dash='dash')))
+        fig.update_layout(title=metric,height=270,margin=dict(l=20,r=20,t=45,b=25),xaxis_title='Burn time (hours)',yaxis_title=metric,legend=dict(orientation='h',y=1.2))
+        st.plotly_chart(fig,use_container_width=True)
+    st.subheader('4  Side-by-side scenario comparison')
+    left,right=st.columns(2)
+    with left:
+        st.markdown(f'**Candidate A — {n} {p["series"]} wicks**')
+        st.dataframe(a,hide_index=True,use_container_width=True)
+    with right:
+        st.markdown(f'**Candidate B — {m} {p["series"]} wicks**')
+        st.dataframe(b,hide_index=True,use_container_width=True)
+    st.error('Soot / wall residue / safety: NOT PREDICTED. Exact wick size: UNKNOWN. Real burn tests are mandatory.')
+    data=pd.concat([a.assign(Scenario=f'A ({n} wicks)'),b.assign(Scenario=f'B ({m} wicks)')],ignore_index=True)
+    st.download_button('Download synthetic demo results (CSV)',data.to_csv(index=False).encode('utf-8-sig'),'Fleming_Synthetic_Demo_Only.csv','text/csv')
+
+with st.expander('5  What AR would approve — next stage'):
+    st.write('**Goal:** convert the demonstration into a validated predictor by linking wax formula, exact wick size, vessel dimensions, and burn-test measurements for the same samples.')
+    st.write('**Validation:** reserve real burn tests not used in model training; compare predictions with measured results and quantify errors before relying on outputs.')
+    st.write('**Business case:** assess whether the validated tool reduces unsuccessful wick trials and development time; these savings are not yet measured.')
+    st.write('**Data security:** this public demonstration contains no Fleming proprietary formula workbook or costing data.')
+st.caption('Fleming Candle Intelligence • v4 • Interactive synthetic POC • Not a scientific prediction or product approval tool')
